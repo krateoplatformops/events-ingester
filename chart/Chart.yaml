@@ -1,0 +1,8 @@
+apiVersion: v2
+name: events-ingester
+description: Helm chart for events-ingester service
+type: application
+
+# Placeholder SOLO per sviluppo locale
+version: 0.0.0
+appVersion: "0.0.0"

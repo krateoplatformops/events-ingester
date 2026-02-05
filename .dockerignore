@@ -1,0 +1,10 @@
+.git
+.coverage
+.coverage.*
+.env
+.vscode
+
+_diagrams/
+manifests/
+scripts/
+testdata/

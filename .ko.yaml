@@ -1,0 +1,9 @@
+
+builds:
+- id: events-ingester
+  env:
+  - COMMIT_HASH={{.Git.ShortCommit}}
+  ldflags:
+  - -s -w
+  - -extldflags "-static"
+  - -X main.build={{.Git.ShortCommit}}

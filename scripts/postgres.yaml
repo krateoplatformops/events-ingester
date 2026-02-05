@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-system
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pgdata
+  namespace: demo-system
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: demo-system
+spec:
+  selector:
+    app: pg
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: demo-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pg
+  template:
+    metadata:
+      labels:
+        app: pg
+    spec:
+      containers:
+        - name: db
+          image: postgres:bookworm
+          env:
+            - name: POSTGRES_USER
+              value: test
+            - name: POSTGRES_PASSWORD
+              value: test
+            - name: POSTGRES_DB
+              value: testdb
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql   # CORRETTO PER POSTGRES 15+
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: pgdata

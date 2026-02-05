@@ -1,0 +1,48 @@
+namespace: demo-system
+name: events-ingester
+
+replicas: 3
+
+image:
+  repository: ghcr.io/krateoplatformops/events-ingester
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+  automount: false
+
+service:
+  port: 8082
+
+config:
+  DEBUG: "false"
+  DB_READY_TIMEOUT: "2m"
+  PORT: "8082"
+  NAMESPACES: "demo-system"
+
+secret:
+  create: false
+  name: eventrouter-db
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+probes:
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    path: /livez
+    initialDelaySeconds: 10
+    periodSeconds: 15
+
