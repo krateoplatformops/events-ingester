@@ -2,14 +2,16 @@ replicas: 1
 
 config:
   DEBUG: "true"
-  DB_PORT: "5432"
+  
   DB_HOST: postgres.demo-system.svc.cluster.local
+  DB_PORT: "5432"
+  DB_USER: test
+  DB_PASS: test
   DB_NAME: testdb
   DB_PARAMS: "sslmode=disable"
 
-secret:
-  create: false
-  name: eventrouter-db
+  NAMESPACES: "krateo-system"
+
 
 resources:
   requests:
