@@ -14,18 +14,43 @@ serviceAccount:
   name: ""
   automount: false
 
-service:
-  port: 8082
 
 config:
+  # Enable or disable debug logging
   DEBUG: "false"
-  DB_READY_TIMEOUT: "2m"
+
+  # Maximum time to wait for PostgreSQL to become ready
+  DB_READY_TIMEOUT: "4m"
+
+  # Database username
+  # DB_USER: ""
+
+  # Database password (prefer using a Secret)
+  # DB_PASS: ""
+
+  # Database host
+  # DB_HOST: "localhost"
+
+  # PostgreSQL port
+  # DB_PORT: "5432"
+
+  # Extra query parameters (e.g. sslmode=disable&connect_timeout=5)
+  # DB_PARAMS: ""
+
+  # Comma separated list of namespaces to watch for events
+  # NAMESPACES: "krateo-system"
+
   PORT: "8082"
-  NAMESPACES: "demo-system"
+
 
 secret:
   create: false
   name: eventrouter-db
+
+
+service:
+  port: 8082
+
 
 resources:
   requests:
