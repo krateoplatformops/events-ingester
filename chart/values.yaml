@@ -1,6 +1,6 @@
 name: events-ingester
 
-replicas: 3
+replicas: 1
 
 image:
   repository: ghcr.io/krateoplatformops/events-ingester
@@ -56,17 +56,18 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
+
   limits:
     cpu: 500m
-    memory: 512Mi
+    memory: 256Mi
 
 probes:
   readiness:
     path: /readyz
-    initialDelaySeconds: 5
-    periodSeconds: 10
+    initialDelaySeconds: 30
+    periodSeconds: 60
   liveness:
     path: /livez
-    initialDelaySeconds: 10
-    periodSeconds: 15
+    initialDelaySeconds: 30
+    periodSeconds: 60
 
