@@ -56,7 +56,7 @@ spec:
           
           ports:
             - name: http
-              containerPort: {{ .Values.config.PORT | default "8083" | int }}
+              containerPort: {{ .Values.config.PORT | default "8082" | int }}
               protocol: TCP
           {{- with .Values.livenessProbe }}
           livenessProbe:
