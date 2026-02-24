@@ -165,7 +165,7 @@ Helm is used exclusively to:
 ```sh {name=exec-helm-template depends=load-image}
 export $(grep -v '^#' .env | xargs)
 
-helm template event-ingester ./chart \
+helm template events-ingester ./chart \
   -n ${NAMESPACE} \
   --set image.repository=${REPO} \
   --set image.tag=${TAG} \

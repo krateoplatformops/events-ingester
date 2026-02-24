@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "events-ingester.fullname" . }}-events
+  labels:
+    {{- include "events-ingester.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "events-ingester.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "events-ingester.fullname" . }}-events
+  apiGroup: rbac.authorization.k8s.io
