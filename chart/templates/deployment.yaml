@@ -1,3 +1,19 @@
+{{- /*
+Validation block
+*/ -}}
+
+{{- $config := .Values.config | default dict }}
+{{- $secret := .Values.secret | default dict }}
+{{- $secretName := $secret.name | default "" }}
+
+{{- if and (not (hasKey $config "DB_USER")) (eq $secretName "") }}
+{{- fail "DB_USER must be set either in config or via secret.name" }}
+{{- end }}
+
+{{- if and (not (hasKey $config "DB_PASS")) (eq $secretName "") }}
+{{- fail "DB_PASS must be set either in config or via secret.name" }}
+{{- end }}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,7 +36,7 @@ spec:
       {{- end }}
       labels:
         {{- include "events-ingester.labels" . | nindent 8 }}
-	      {{- with .Values.podLabels }}
+        {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
@@ -39,24 +55,30 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           
           env:
-          {{- range $k, $v := .Values.config }}
+          {{- range $k, $v := $config }}
           - name: {{ $k }}
             value: {{ $v | quote }}
           {{- end }}
+          
+          {{- if and (not (hasKey $config "DB_USER")) (ne $secretName "") }}
           - name: DB_USER
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.secret.name }}
+                name: {{ $secretName }}
                 key: DB_USER
+          {{- end }}
+          
+          {{- if and (not (hasKey $config "DB_PASS")) (ne $secretName "") }}
           - name: DB_PASS
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.secret.name }}
+                name: {{ $secretName }}
                 key: DB_PASS
+          {{- end }}
           
           ports:
             - name: http
-              containerPort: {{ .Values.config.PORT | default "8082" | int }}
+              containerPort: {{ $config.PORT | default "8082" | int }}
               protocol: TCP
           {{- with .Values.livenessProbe }}
           livenessProbe:
