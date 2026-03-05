@@ -10,11 +10,11 @@ import (
 
 	"github.com/krateoplatformops/events-ingester/internal/batch"
 	"github.com/krateoplatformops/events-ingester/internal/config"
-	"github.com/krateoplatformops/events-ingester/internal/probes"
 	"github.com/krateoplatformops/events-ingester/internal/queue"
 	"github.com/krateoplatformops/events-ingester/internal/router"
-	"github.com/krateoplatformops/events-ingester/internal/util/kube"
-	pgutil "github.com/krateoplatformops/events-ingester/internal/util/pg"
+	"github.com/krateoplatformops/plumbing/kubeutil"
+	"github.com/krateoplatformops/plumbing/pgutil"
+	"github.com/krateoplatformops/plumbing/server/probes"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -55,7 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	clusterName := kube.DetectClusterName(restConfig)
+	clusterName := kubeutil.DetectClusterName(restConfig)
 	cfg.Log.Info("cluster name detected", slog.String("cluster", clusterName))
 
 	// Record channel and batch worker

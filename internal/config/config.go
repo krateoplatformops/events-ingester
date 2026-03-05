@@ -9,8 +9,8 @@ import (
 	"time"
 
 	logutil "github.com/krateoplatformops/events-ingester/internal/util/log"
-	pgutil "github.com/krateoplatformops/events-ingester/internal/util/pg"
 	"github.com/krateoplatformops/plumbing/env"
+	"github.com/krateoplatformops/plumbing/pgutil"
 )
 
 const (
