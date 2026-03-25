@@ -126,19 +126,28 @@ func (ing *ingester) buildRecord(evt corev1.Event, compositionID string) batch.I
 		}
 	}
 
+	involvedObjectUID := pgtype.Text{Valid: false}
+	if uid := string(evt.InvolvedObject.UID); uid != "" {
+		involvedObjectUID = pgtype.Text{
+			String: uid,
+			Valid:  true,
+		}
+	}
+
 	return batch.InsertRecord{
-		CreatedAt:       created,
-		ClusterName:     ing.clusterName,
-		UID:             string(evt.UID),
-		GlobalUID:       fmt.Sprintf("%s:%s", ing.clusterName, evt.UID),
-		Namespace:       evt.Namespace,
-		ResourceKind:    resourceKind,
-		ResourceName:    evt.InvolvedObject.Name,
-		EventType:       evt.Type,
-		Reason:          evt.Reason,
-		Message:         evt.Message,
-		CompositionID:   cid,
-		ResourceVersion: evt.ResourceVersion,
-		Raw:             raw,
+		CreatedAt:         created,
+		ClusterName:       ing.clusterName,
+		UID:               string(evt.UID),
+		GlobalUID:         fmt.Sprintf("%s:%s", ing.clusterName, evt.UID),
+		Namespace:         evt.Namespace,
+		ResourceKind:      resourceKind,
+		ResourceName:      evt.InvolvedObject.Name,
+		InvolvedObjectUID: involvedObjectUID,
+		EventType:         evt.Type,
+		Reason:            evt.Reason,
+		Message:           evt.Message,
+		CompositionID:     cid,
+		ResourceVersion:   evt.ResourceVersion,
+		Raw:               raw,
 	}
 }

@@ -63,6 +63,7 @@ INSERT INTO k8s_events (
     namespace,
     resource_kind,
     resource_name,
+    involved_object_uid,
     event_type,
     reason,
     message,
@@ -71,10 +72,10 @@ INSERT INTO k8s_events (
     uid,
     resource_version
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8,
-    NULLIF($9, ''),
-    $10,
-    $11, $12
+    $1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9,
+    NULLIF($10, ''),
+    $11,
+    $12, $13
 )
 ON CONFLICT (uid, resource_version) DO NOTHING;
 `,
@@ -83,6 +84,7 @@ ON CONFLICT (uid, resource_version) DO NOTHING;
 		e.Namespace,
 		e.InvolvedObject.Kind,
 		e.InvolvedObject.Name,
+		string(e.InvolvedObject.UID),
 		e.Type,
 		e.Reason,
 		e.Message,
