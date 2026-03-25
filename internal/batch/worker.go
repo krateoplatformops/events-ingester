@@ -116,7 +116,7 @@ func (w *Worker) flush() {
 		vals = append(vals,
 			r.CreatedAt, r.ClusterName, r.UID, r.GlobalUID,
 			r.Namespace, r.ResourceKind, r.ResourceName,
-			r.EventType, r.Reason, r.Message, r.CompositionID,
+			r.InvolvedObjectUID, r.EventType, r.Reason, r.Message, r.CompositionID,
 			r.Raw, r.ResourceVersion,
 		)
 	}
