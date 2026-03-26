@@ -124,6 +124,8 @@ The application is configured via environment variables.
 | `DB_PARAMS` | Extra connection parameters | — |
 | `DB_READY_TIMEOUT` | Max wait for PostgreSQL readiness | `2m` |
 | `NAMESPACES` | Namespaces to watch | all (if empty) |
+| `OTEL_ENABLED` | Enable OpenTelemetry metrics export | `false` |
+| `OTEL_EXPORT_INTERVAL` | OpenTelemetry metric export interval | `50s` |
 
 > The service builds the PostgreSQL connection string from these values.
 
@@ -176,3 +178,11 @@ Best practices:
 - Monitor queue depth
 - Enable PostgreSQL connection pooling
 - Co-locate with the database when possible to reduce latency
+
+## Telemetry
+
+This project includes ready-to-use telemetry assets under [`telemetry`](telemetry):
+
+- OpenTelemetry Collector sample config
+- Grafana dashboard
+- Metrics reference with PromQL examples

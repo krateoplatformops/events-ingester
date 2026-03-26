@@ -9,4 +9,6 @@ config:
   DB_PARAMS: "sslmode=disable&connect_timeout=5"
 
   NAMESPACES: "krateo-system"
+  OTEL_ENABLED: "false"
+  OTEL_EXPORT_INTERVAL: "50s"
   PORT: "8082"

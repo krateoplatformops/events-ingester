@@ -12,6 +12,7 @@ import (
 	"github.com/krateoplatformops/events-ingester/internal/config"
 	"github.com/krateoplatformops/events-ingester/internal/queue"
 	"github.com/krateoplatformops/events-ingester/internal/router"
+	"github.com/krateoplatformops/events-ingester/internal/telemetry"
 	"github.com/krateoplatformops/plumbing/kubeutil"
 	"github.com/krateoplatformops/plumbing/pgutil"
 	"github.com/krateoplatformops/plumbing/server/probes"
@@ -25,6 +26,21 @@ func main() {
 
 	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	metrics, shutdownMetrics, err := telemetry.Setup(rootCtx, cfg.Log, telemetry.Config{
+		Enabled:        cfg.OTelEnabled,
+		ServiceName:    "events-ingester",
+		ExportInterval: cfg.OTelExportIntv,
+	})
+	if err != nil {
+		cfg.Log.Error("cannot initialize OpenTelemetry metrics", slog.Any("err", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := shutdownMetrics(context.Background()); err != nil {
+			cfg.Log.Error("OpenTelemetry metrics shutdown failed", slog.Any("err", err))
+		}
+	}()
 
 	router.StartCacheCleaner(rootCtx, 2*time.Minute)
 
@@ -66,6 +82,7 @@ func main() {
 		Input:      recordChan,
 		MaxBatch:   50,
 		FlushEvery: 5 * time.Second,
+		Metrics:    metrics,
 	})
 	go batchWorker.Run(rootCtx.Done())
 
@@ -82,6 +99,7 @@ func main() {
 		Log:         cfg.Log,
 		RecordChan:  recordChan,
 		ClusterName: clusterName,
+		Metrics:     metrics,
 	})
 	if err != nil {
 		cfg.Log.Error("cannot create ingester", slog.Any("err", err))
@@ -96,8 +114,24 @@ func main() {
 		ResyncInterval: 30 * time.Second, // TODO make configurable
 		ThrottlePeriod: 5 * time.Minute,  // TODO make configurable
 		Namespaces:     cfg.Namespaces,
+		Metrics:        metrics,
 	})
 	go evRouter.Run(rootCtx.Done())
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-rootCtx.Done():
+				return
+			case <-ticker.C:
+				metrics.SetRecordChannelDepth(int64(len(recordChan)))
+				metrics.SetQueueDepth(int64(jobQueue.GetJobCount()))
+			}
+		}
+	}()
 
 	// Monitor buffer
 	go func() {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/krateoplatformops/events-ingester/internal/telemetry"
 )
 
 type Worker struct {
@@ -20,6 +21,7 @@ type Worker struct {
 	maxBatch   int
 	flushEvery time.Duration
 	columns    []string
+	metrics    *telemetry.Metrics
 }
 
 type WorkerOpts struct {
@@ -28,6 +30,7 @@ type WorkerOpts struct {
 	Input      <-chan InsertRecord
 	MaxBatch   int
 	FlushEvery time.Duration
+	Metrics    *telemetry.Metrics
 }
 
 // NewWorker creates a batch worker
@@ -41,6 +44,7 @@ func NewWorker(opts WorkerOpts) *Worker {
 		flushEvery: opts.FlushEvery,
 		columns:    parseColumns(cols),
 		buffer:     make([]InsertRecord, 0, opts.MaxBatch),
+		metrics:    opts.Metrics,
 	}
 }
 
@@ -91,8 +95,11 @@ func (w *Worker) flush() {
 	if len(w.buffer) == 0 {
 		return
 	}
-
+	started := time.Now()
+	batchSize := len(w.buffer)
 	ctx := context.Background()
+	defer w.metrics.RecordBatchFlush(ctx, time.Since(started), batchSize)
+
 	var b strings.Builder
 
 	b.WriteString("INSERT INTO k8s_events (")
@@ -132,9 +139,13 @@ func (w *Worker) flush() {
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			// Duplicate key, ignora o logga
 			w.log.Debug("duplicate key ignored", slog.Any("err", pgErr))
+			w.metrics.IncDBInsertFailure(ctx, "duplicate")
 		} else {
 			w.log.Error("batch insert failed", slog.Any("err", err))
+			w.metrics.IncDBInsertFailure(ctx, "error")
 		}
+	} else {
+		w.metrics.AddDBInsertRows(ctx, int64(batchSize))
 	}
 
 	w.log.Debug("flushed batch", slog.Int("count", len(w.buffer)))
