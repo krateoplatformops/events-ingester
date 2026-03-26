@@ -138,4 +138,10 @@ config:
   # Comma separated list of namespaces to watch for events
   # NAMESPACES: "krateo-system"
 
+  # OpenTelemetry metrics (OTLP HTTP exporter)
+  OTEL_ENABLED: "false"
+  OTEL_EXPORT_INTERVAL: "50s"
+  # OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+  # OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "http://otel-collector:4318/v1/metrics"
+
   PORT: "8082"

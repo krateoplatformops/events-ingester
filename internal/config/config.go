@@ -24,6 +24,8 @@ type Config struct {
 	Debug          bool
 	DbURL          string
 	DbReadyTimeout time.Duration
+	OTelEnabled    bool
+	OTelExportIntv time.Duration
 	Namespaces     []string
 	Log            *slog.Logger
 }
@@ -75,6 +77,16 @@ func Setup() *Config {
 		"maximum time to wait for PostgreSQL to become ready",
 	)
 
+	cfgOTelEnabled := flag.Bool("otel-enabled",
+		env.Bool("OTEL_ENABLED", false),
+		"enable OpenTelemetry metrics exporter",
+	)
+
+	cfgOTelExportInterval := flag.Duration("otel-export-interval",
+		env.Duration("OTEL_EXPORT_INTERVAL", 50*time.Second),
+		"OpenTelemetry metric export interval",
+	)
+
 	namespaces := flag.String("namespaces", env.String("NAMESPACES", ""), "comma separated list of namespaces")
 
 	flag.Usage = func() {
@@ -93,6 +105,8 @@ func Setup() *Config {
 	cfg.Port = *cfgPort
 	cfg.Debug = *cfgDebug
 	cfg.DbReadyTimeout = *cfgDbReadyTimeout
+	cfg.OTelEnabled = *cfgOTelEnabled
+	cfg.OTelExportIntv = *cfgOTelExportInterval
 
 	cfg.Log = logutil.New(serviceName, cfg.Debug)
 
