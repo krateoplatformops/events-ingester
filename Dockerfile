@@ -1,6 +1,6 @@
 # Build environment
 # -----------------
-FROM golang:latest as builder
+FROM golang:latest AS builder
 LABEL stage=builder
 
 ARG DEBIAN_FRONTEND=noninteractive
