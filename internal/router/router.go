@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/krateoplatformops/events-ingester/internal/k8sevents"
 	"github.com/krateoplatformops/events-ingester/internal/telemetry"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -27,6 +28,7 @@ type EventRouter struct {
 	throttlePeriod time.Duration
 	log            *slog.Logger
 	metrics        *telemetry.Metrics
+	partitions     PartitionRangeProvider
 }
 
 type EventRouterOpts struct {
@@ -39,6 +41,7 @@ type EventRouterOpts struct {
 	// Multiple namespaces or nil -> watch everything
 	Namespaces []string
 	Metrics    *telemetry.Metrics
+	Partitions PartitionRangeProvider
 }
 
 func NewEventRouter(opts EventRouterOpts) *EventRouter {
@@ -66,6 +69,7 @@ func NewEventRouter(opts EventRouterOpts) *EventRouter {
 		throttlePeriod: opts.ThrottlePeriod,
 		log:            opts.Log,
 		metrics:        opts.Metrics,
+		partitions:     opts.Partitions,
 	}
 }
 
@@ -128,15 +132,29 @@ func (er *EventRouter) onEvent(event *corev1.Event) {
 	ctx := context.Background()
 	er.metrics.IncEventsReceived(ctx)
 
-	// Throttle old events (EventTime is preferred, fallback to LastTimestamp)
-	ts := event.EventTime.Time
-	if ts.IsZero() {
-		ts = event.LastTimestamp.Time
-	}
+	ts := k8sevents.Timestamp(*event)
 
 	if er.throttlePeriod > 0 && time.Since(ts) > er.throttlePeriod {
 		er.metrics.IncEventsDropped(ctx, "throttled")
 		return
+	}
+
+	if er.partitions != nil {
+		rng, ok := er.partitions.Current(ctx)
+		if ok && !rng.Contains(ts) {
+			er.metrics.IncEventsDropped(ctx, "outside_partition_range")
+			er.log.Warn("skipping event outside k8s_events partition range",
+				slog.String("eventTimestamp", ts.Format(time.RFC3339Nano)),
+				slog.String("minPartitionStart", rng.MinPartitionStart.Format(time.RFC3339Nano)),
+				slog.String("maxPartitionEnd", rng.MaxPartitionEnd.Format(time.RFC3339Nano)),
+				slog.String("uid", string(event.UID)),
+				slog.String("resourceVersion", event.ResourceVersion),
+				slog.String("namespace", event.Namespace),
+				slog.String("eventName", event.Name),
+				slog.String("objectName", event.InvolvedObject.Name),
+			)
+			return
+		}
 	}
 
 	er.log.Debug("K8s event received",

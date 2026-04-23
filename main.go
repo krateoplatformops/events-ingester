@@ -95,7 +95,6 @@ func main() {
 	ing, err := router.NewIngester(router.IngesterOpts{
 		RESTConfig:  restConfig,
 		Queue:       jobQueue,
-		Pool:        pool,
 		Log:         cfg.Log,
 		RecordChan:  recordChan,
 		ClusterName: clusterName,
@@ -107,6 +106,7 @@ func main() {
 	}
 
 	// EventRouter
+	partitionRangeProvider := router.NewPartitionRangeProvider(pool, cfg.Log, time.Minute)
 	evRouter := router.NewEventRouter(router.EventRouterOpts{
 		RESTClient:     client.CoreV1().RESTClient(),
 		Log:            cfg.Log,
@@ -115,6 +115,7 @@ func main() {
 		ThrottlePeriod: 5 * time.Minute,  // TODO make configurable
 		Namespaces:     cfg.Namespaces,
 		Metrics:        metrics,
+		Partitions:     partitionRangeProvider,
 	})
 	go evRouter.Run(rootCtx.Done())
 

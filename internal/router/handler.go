@@ -10,8 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krateoplatformops/events-ingester/internal/batch"
+	"github.com/krateoplatformops/events-ingester/internal/k8sevents"
 	"github.com/krateoplatformops/events-ingester/internal/objects"
 	"github.com/krateoplatformops/events-ingester/internal/queue"
 	"github.com/krateoplatformops/events-ingester/internal/telemetry"
@@ -22,7 +22,6 @@ import (
 type IngesterOpts struct {
 	RESTConfig  *rest.Config
 	Queue       queue.Queuer
-	Pool        *pgxpool.Pool
 	Log         *slog.Logger
 	RecordChan  chan<- batch.InsertRecord // NEW
 	ClusterName string                    // opzionale ma utile
@@ -50,7 +49,6 @@ var _ EventHandler = (*ingester)(nil)
 type ingester struct {
 	objectResolver *objects.ObjectResolver
 	notifyQueue    queue.Queuer
-	pool           *pgxpool.Pool
 	log            *slog.Logger
 	recordChan     chan<- batch.InsertRecord
 	clusterName    string
@@ -104,11 +102,7 @@ func (ing *ingester) Handle(evt corev1.Event) {
 }
 
 func (ing *ingester) buildRecord(evt corev1.Event, compositionID string) batch.InsertRecord {
-	// Choose best timestamp
-	created := evt.EventTime.Time
-	if created.IsZero() {
-		created = evt.CreationTimestamp.Time
-	}
+	created := k8sevents.Timestamp(evt)
 
 	// Minify and label
 	out := minifyEvent(evt)
