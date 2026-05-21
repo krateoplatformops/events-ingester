@@ -10,6 +10,7 @@ import (
 	"github.com/krateoplatformops/events-ingester/internal/objects"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -51,50 +52,62 @@ func findCompositionID(resolver *objects.ObjectResolver, ref *corev1.ObjectRefer
 		compositionCache.Delete(ref.UID)
 	}
 
-	// 2. Hit k8s API server
-	var obj *unstructured.Unstructured
-	retryErr := retry.OnError(retry.DefaultRetry,
-		func(e error) bool {
-			if e != nil {
-				resolver.InvalidateRESTMapperCache()
-				return true
-			}
-			return false
-		},
-		func() error {
-			obj, err = resolver.ResolveReference(context.Background(), ref)
-			return err
-		})
-	if retryErr != nil {
-		return "", retryErr
+	gv, err := schema.ParseGroupVersion(ref.APIVersion)
+	if err != nil {
+		return "", err
 	}
 
-	if obj == nil {
-		log.Warn("object not found resolving reference",
-			slog.String("name", ref.Name),
-			slog.String("kind", ref.Kind),
-			slog.String("apiVersion", ref.APIVersion),
-		)
-		return "", nil
+	// 2. Check if InvolvedObject is a Composition
+	if gv.Group == "composition.krateo.io" {
+		cid = string(ref.UID)
 	}
 
-	labels := obj.GetLabels()
-	if len(labels) == 0 {
-		log.Info("no labels found in resolved reference",
-			slog.String("name", ref.Name),
-			slog.String("kind", ref.Kind),
-			slog.String("apiVersion", ref.APIVersion),
-		)
-		return "", nil
+	// 3. Hit k8s API server
+	if cid == "" {
+		var obj *unstructured.Unstructured
+		retryErr := retry.OnError(retry.DefaultRetry,
+			func(e error) bool {
+				if e != nil {
+					resolver.InvalidateRESTMapperCache()
+					return true
+				}
+				return false
+			},
+			func() error {
+				obj, err = resolver.ResolveReference(context.Background(), ref)
+				return err
+			})
+		if retryErr != nil {
+			return "", retryErr
+		}
+
+		if obj == nil {
+			log.Warn("object not found resolving reference",
+				slog.String("name", ref.Name),
+				slog.String("kind", ref.Kind),
+				slog.String("apiVersion", ref.APIVersion),
+			)
+			return "", nil
+		}
+
+		labels := obj.GetLabels()
+		if len(labels) == 0 {
+			log.Info("no labels found in resolved reference",
+				slog.String("name", ref.Name),
+				slog.String("kind", ref.Kind),
+				slog.String("apiVersion", ref.APIVersion),
+			)
+			return "", nil
+		}
+
+		var ok bool
+		cid, ok = labels[keyCompositionID]
+		if !ok || cid == "" {
+			return "", ErrCompositionIdNotFound
+		}
 	}
 
-	var ok bool
-	cid, ok = labels[keyCompositionID]
-	if !ok || cid == "" {
-		return "", ErrCompositionIdNotFound
-	}
-
-	// 3. Update cache
+	// 4. Update cache
 	compositionCache.Store(ref.UID, cacheEntry{
 		value:     cid,
 		expiresAt: time.Now().Add(cacheTTL),
