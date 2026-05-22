@@ -75,12 +75,12 @@ func main() {
 	cfg.Log.Info("cluster name detected", slog.String("cluster", clusterName))
 
 	// Record channel and batch worker
-	recordChan := make(chan batch.InsertRecord, 100)
+	recordChan := make(chan batch.InsertRecord, 1000)
 	batchWorker := batch.NewWorker(batch.WorkerOpts{
 		Pool:       pool,
 		Log:        cfg.Log,
 		Input:      recordChan,
-		MaxBatch:   50,
+		MaxBatch:   100,
 		FlushEvery: 5 * time.Second,
 		Metrics:    metrics,
 	})
